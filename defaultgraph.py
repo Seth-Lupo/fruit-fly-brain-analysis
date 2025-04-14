@@ -1,4 +1,4 @@
-#df schema 
+#df schema
 
 #           pre_pt_root_id     post_pt_root_id neuropil  syn_count nt_type
 # 0         720575940613354467  720575940616690107     ME_L          1     ACH
@@ -86,12 +86,12 @@ def random_neuropil(graph, _):
 
 def most_popular_neuropil(graph, _):
     neighbor_votes = {}
-    
+
     for _, _, data in graph.edges(data=True):
         neuropil = data.get('neuropil')
         if neuropil:
             neighbor_votes[neuropil] = neighbor_votes.get(neuropil, 0) + 1
-    
+
     if neighbor_votes:
         return max(neighbor_votes.items(), key=lambda x: x[1])[0]
     else:
@@ -100,63 +100,63 @@ def most_popular_neuropil(graph, _):
 def majority_vote_neuropil(graph, edge):
     neighbor_votes = {}
     source, target = edge
-    
+
     # Get all edges that share either the source or target vertex
     neighbor_edges = []
     for e in graph.edges(data=True):
         if source in e[:2] or target in e[:2]:
             if e[:2] != (source, target):  # Don't include the edge itself
                 neighbor_edges.append(e)
-    
+
     # Count votes for each neuropil from neighboring edges
     for _, _, data in neighbor_edges:
         neuropil = data.get('neuropil')
         if neuropil:
             neighbor_votes[neuropil] = neighbor_votes.get(neuropil, 0) + 1
-    
+
     # Determine the neuropil with the most votes
     if neighbor_votes:
         predicted_neuropil = max(neighbor_votes, key=neighbor_votes.get)
         return predicted_neuropil
     else:
         return None
-    
+
 def majority_vote_weighted_neuropil(graph, edge):
     neighbor_votes = {}
     source, target = edge
-    
+
     # Get all edges that share either the source or target vertex
     neighbor_edges = []
     for e in graph.edges(data=True):
         if source in e[:2] or target in e[:2]:
             if e[:2] != (source, target):  # Don't include the edge itself
                 neighbor_edges.append(e)
-    
+
     # Count weighted votes for each neuropil from neighboring edges
     for _, _, data in neighbor_edges:
         neuropil = data.get('neuropil')
         syn_count = data.get('syn_count', 0)  # Default to 0 if syn_count is missing
         if neuropil:
             neighbor_votes[neuropil] = neighbor_votes.get(neuropil, 0) + syn_count
-    
+
     # Determine the neuropil with the most weighted votes
     if neighbor_votes:
         predicted_neuropil = max(neighbor_votes, key=neighbor_votes.get)
         return predicted_neuropil
     else:
         return None
-    
+
 def log_weighted_majority_vote_neuropil(graph, edge):
     neighbor_votes = {}
     source, target = edge
-    
+
     # Get all edges that share either the source or target vertex
     neighbor_edges = []
     for e in graph.edges(data=True):
         if source in e[:2] or target in e[:2]:
             if e[:2] != (source, target):  # Don't include the edge itself
                 neighbor_edges.append(e)
-    
+
     # Count weighted votes for each neuropil from neighboring edges using logarithmic scaling
     for _, _, data in neighbor_edges:
         neuropil = data.get('neuropil')
@@ -164,36 +164,36 @@ def log_weighted_majority_vote_neuropil(graph, edge):
         if neuropil and syn_count > 0:  # Only consider positive syn_count for log scaling
             weight = np.log(syn_count)  # Apply logarithmic scaling
             neighbor_votes[neuropil] = neighbor_votes.get(neuropil, 0) + weight
-    
+
     # Determine the neuropil with the most weighted votes
     if neighbor_votes:
         predicted_neuropil = max(neighbor_votes, key=neighbor_votes.get)
         return predicted_neuropil
     else:
         return None
-    
+
 def nt_type_weighted_majority_vote_neuropil(graph, edge, k=100):
     neighbor_votes = {}
     source, target = edge
     edge_nt_type = graph.edges[edge].get('nt_type')
-    
+
     # Get all edges that share either the source or target vertex
     neighbor_edges = []
     for e in graph.edges(data=True):
         if source in e[:2] or target in e[:2]:
             if e[:2] != (source, target):  # Don't include the edge itself
                 neighbor_edges.append(e)
-    
+
     # Count votes with bonus for matching nt_type
     for _, _, data in neighbor_edges:
         neuropil = data.get('neuropil')
         neighbor_nt_type = data.get('nt_type')
-        
+
         if neuropil:
             # Base vote is 1, multiply by k if nt_types match
             vote_weight = k if (edge_nt_type and neighbor_nt_type and edge_nt_type == neighbor_nt_type) else 1
             neighbor_votes[neuropil] = neighbor_votes.get(neuropil, 0) + vote_weight
-    
+
     # Determine the neuropil with the most votes
     if neighbor_votes:
         predicted_neuropil = max(neighbor_votes, key=neighbor_votes.get)
@@ -205,7 +205,7 @@ def directional_majority_vote_neuropil(graph, edge):
     u, v = edge
     incoming_votes = {}
     outgoing_votes = {}
-    
+
     # Count incoming edges to u and outgoing edges from v for each neuropil
     for e in graph.edges(data=True):
         neuropil = e[2].get('neuropil')
@@ -219,19 +219,19 @@ def directional_majority_vote_neuropil(graph, edge):
 
     # Calculate the product of incoming and outgoing counts
     product_votes = {neuropil: incoming_votes.get(neuropil, 0) * outgoing_votes.get(neuropil, 0) for neuropil in incoming_votes.keys()}
-    
+
     # Determine the neuropil with the greatest product
     if product_votes:
         predicted_neuropil = max(product_votes, key=product_votes.get)
         return predicted_neuropil
     else:
         return None
-    
+
 
 def normalized_majority_vote_neuropil(graph, edge):
     u, v = edge
     neighbor_votes = {}
-    
+
     # Calculate total frequencies of each neuropil in the graph
     total_frequencies = {}
     for e in graph.edges(data=True):
@@ -245,16 +245,16 @@ def normalized_majority_vote_neuropil(graph, edge):
         if u in e[:2] or v in e[:2]:
             if e[:2] != (u, v):  # Don't include the edge itself
                 neighbor_edges.append(e)
-    
+
     # Count votes
     for _, _, data in neighbor_edges:
         neuropil = data.get('neuropil')
         if neuropil:
             neighbor_votes[neuropil] = neighbor_votes.get(neuropil, 0) + 1
-    
+
     # Normalize votes by the log of total frequencies
     normalized_votes = {neuropil: vote / np.log(total_frequencies.get(neuropil, 1)) for neuropil, vote in neighbor_votes.items()}
-    
+
     # Determine the neuropil with the most normalized votes
     if normalized_votes:
         predicted_neuropil = max(normalized_votes, key=normalized_votes.get)
@@ -266,11 +266,11 @@ def normalized_majority_vote_neuropil(graph, edge):
 
 def jaccard_similarity_neuropil(graph, edge):
     u, v = edge
-    
+
     # Get neighbors of u and v
     u_neighbors = set(graph.neighbors(u))
     v_neighbors = set(graph.neighbors(v))
-    
+
     # Get all unique neuropils from neighboring edges
     neuropils = set()
     for e in graph.edges(data=True):
@@ -278,33 +278,74 @@ def jaccard_similarity_neuropil(graph, edge):
             neuropil = e[2].get('neuropil')
             if neuropil:
                 neuropils.add(neuropil)
-    
+
     # Calculate Jaccard similarity for each neuropil
     best_similarity = -1
     predicted_neuropil = None
-    
+
     for neuropil in neuropils:
         # Get neighbors that connect via edges with this neuropil
-        u_neuropil_neighbors = {n for n in u_neighbors if graph.edges.get((u,n),{}).get('neuropil') == neuropil 
+        u_neuropil_neighbors = {n for n in u_neighbors if graph.edges.get((u,n),{}).get('neuropil') == neuropil
                               or graph.edges.get((n,u),{}).get('neuropil') == neuropil}
         v_neuropil_neighbors = {n for n in v_neighbors if graph.edges.get((v,n),{}).get('neuropil') == neuropil
                               or graph.edges.get((n,v),{}).get('neuropil') == neuropil}
-        
+
         # Calculate Jaccard similarity
         intersection = len(u_neuropil_neighbors & v_neuropil_neighbors)
         union = len(u_neuropil_neighbors | v_neuropil_neighbors)
-        
+
         if union > 0:
             similarity = intersection / union
             if similarity > best_similarity:
                 best_similarity = similarity
                 predicted_neuropil = neuropil
-    
+
+    return predicted_neuropil
+
+def adamic_adar(graph, edge):
+    u, v = edge
+
+    # Get neighbors of u and v
+    u_neighbors = set(graph.neighbors(u))
+    v_neighbors = set(graph.neighbors(v))
+
+    # Get all unique neuropils from neighboring edges
+    neuropils = set()
+    for e in graph.edges(data=True):
+        if u in e[:2] or v in e[:2]:
+            neuropil = e[2].get('neuropil')
+            if neuropil:
+                neuropils.add(neuropil)
+
+    # Calculate Adamic Adar similarity for each neuropil
+    best_similarity = -1
+    predicted_neuropil = None
+
+    for neuropil in neuropils:
+        # Get neighbors that connect via edges with this neuropil
+        u_neuropil_neighbors = {n for n in u_neighbors if graph.edges.get((u,n),{}).get('neuropil') == neuropil
+                              or graph.edges.get((n,u),{}).get('neuropil') == neuropil}
+        v_neuropil_neighbors = {n for n in v_neighbors if graph.edges.get((v,n),{}).get('neuropil') == neuropil
+                              or graph.edges.get((n,v),{}).get('neuropil') == neuropil}
+
+        # Calculate Adamic Adar similarity
+        intersection = u_neuropil_neighbors & v_neuropil_neighbors
+        similarity = 0
+        for z in intersection:
+            z_neighbors = set(graph.neighbors(z))
+            z_neuropil_neighbors = {n for n in z_neighbors if graph.edges.get((z,n),{}).get('neuropil') == neuropil
+                              or graph.edges.get((n,z),{}).get('neuropil') == neuropil}
+            if np.log(len(z_neuropil_neighbors)) != 0:
+                similarity += 1.0/np.log(len(z_neuropil_neighbors))
+        if similarity > best_similarity:
+            best_similarity = similarity
+            predicted_neuropil = neuropil
+
     return predicted_neuropil
 
 
 
-    
+
 def trial(func, graph, edge):
     # Check if the edge has a label
     if 'neuropil' not in graph.edges[edge]:
@@ -312,10 +353,10 @@ def trial(func, graph, edge):
 
     actual_neuropil = graph.edges[edge]['neuropil']
     predicted_neuropil = func(graph, edge)
-    
+
     if predicted_neuropil is None:  # Handle case where prediction fails
         return 0
-        
+
     if predicted_neuropil == actual_neuropil:
         return 1  # Correct prediction
     else:
@@ -324,13 +365,13 @@ def trial(func, graph, edge):
 def validate(func, graph):
     total_trials = 0
     correct_predictions = 0
-    
+
     for edge in graph.edges:
         result = trial(func, graph, edge)
         if result != -1:  # Only count valid trials
             total_trials += 1
             correct_predictions += result
-    
+
     accuracy = correct_predictions / total_trials if total_trials > 0 else 0
     return (total_trials, correct_predictions, accuracy)
 
@@ -347,3 +388,4 @@ for i in range(10,20):
     print(f"Directional majority vote neuropil     : {validate(directional_majority_vote_neuropil, G)}")
     print(f"Normalized majority vote neuropil      : {validate(normalized_majority_vote_neuropil, G)}")
     print(f"Jaccard similarity neuropil          : {validate(jaccard_similarity_neuropil, G)}")
+    print(f"Adamic Adar similarity neuropil          : {validate(adamic_adar, G)}")
