@@ -343,7 +343,56 @@ def adamic_adar(graph, edge):
 
     return predicted_neuropil
 
+def katz_unweighted_neuropil(graph, edge, beta=0.05, max_path_length=5):
+    u, v = edge
 
+    # Get all unique neuropils from neighboring edges
+    neuropils = set()
+    for e in graph.edges(data=True):
+        if u in e[:2] or v in e[:2]:
+            neuropil = e[2].get('neuropil')
+            if neuropil:
+                neuropils.add(neuropil)
+
+    # Calculate Katz similarity for each neuropil
+    best_similarity = -1
+    predicted_neuropil = None
+
+    for neuropil in neuropils:
+        # Create a subgraph with only edges of this neuropil
+        neuropil_edges = [(src, tgt) for src, tgt, data in graph.edges(data=True)
+                         if data.get('neuropil') == neuropil]
+        subgraph = nx.DiGraph()
+        subgraph.add_edges_from(neuropil_edges)
+
+        # Get adjacency matrix
+        A = nx.adjacency_matrix(subgraph).toarray()
+        nodes = list(subgraph.nodes())
+
+        # Get node indices in the adjacency matrix
+        try:
+            i_u = nodes.index(u)
+            i_v = nodes.index(v)
+        except ValueError:
+            # One or both nodes not in this neuropil's subgraph
+            continue
+
+        # Calculate powers of A for different path lengths
+        katz_score = 0
+        A_power = A.copy()  # Start with A^1
+
+        for path_length in range(1, max_path_length + 1):
+            if path_length > 1:
+                A_power = A_power @ A  # Compute next power A^path_length
+
+            # Add contribution of paths of this length
+            katz_score += (beta ** path_length) * A_power[i_u, i_v]
+
+        if katz_score > best_similarity:
+            best_similarity = katz_score
+            predicted_neuropil = neuropil
+
+    return predicted_neuropil
 
 
 def trial(func, graph, edge):
@@ -389,3 +438,4 @@ for i in range(10,20):
     print(f"Normalized majority vote neuropil      : {validate(normalized_majority_vote_neuropil, G)}")
     print(f"Jaccard similarity neuropil          : {validate(jaccard_similarity_neuropil, G)}")
     print(f"Adamic Adar similarity neuropil          : {validate(adamic_adar, G)}")
+    print(f"Katz unweighted neuropil (beta=0.05)     : {validate(katz_unweighted_neuropil, G)}")
